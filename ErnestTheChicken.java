@@ -12,19 +12,14 @@ import org.dreambot.api.wrappers.interactive.NPC;
 import static org.dreambot.api.methods.interactive.Players.getLocal;
 
 public class ErnestTheChicken {
-    public static int onLoop(CoffScript s) {
-        if ((boolean) State.getInstance().questsDone.get(FreeQuest.ERNEST_THE_CHICKEN) || Inventory.isFull()) {
+    public static void onLoop(CoffScript s) {
+        if (Quests.isFinished(FreeQuest.ERNEST_THE_CHICKEN) || Inventory.isFull()) {
             State.getInstance().clearActivity();
-            return 1000;
+            return;
         }
 
-        int configValue = PlayerSettings.getConfig(32);
-
-        if (configValue == 3) {
-            // Quest done
-            State.getInstance().questsDone.put(FreeQuest.ERNEST_THE_CHICKEN, true);
-        } else if (configValue == 0) {
-            // Quest not started
+        // Start quest
+        if (FreeQuest.ERNEST_THE_CHICKEN.getConfigValue() == 0) {
             if (!Constants.DRAYNOR_MANOR_ENTRANCE.contains(getLocal())) {
                 s.log("Walking to Draynor Manor Entrance");
                 Walking.walk(Constants.DRAYNOR_MANOR_ENTRANCE.getCenter());
@@ -37,13 +32,18 @@ public class ErnestTheChicken {
                     veronica.interact("Talk-to");
                 }
             }
-        } else if (!Inventory.contains(Constants.PRESSURE_GAUGE)) {
+            return;
+        }
+
+        // Get pressure gauge
+        if (!Inventory.contains(Constants.PRESSURE_GAUGE)) {
             if (!Inventory.contains(Constants.POISONED_FISH_FOOD) && !Constants.FOUNTAIN_AREA.contains(getLocal())) {
+                // Get fish food
                 if (!Inventory.contains(Constants.FISH_FOOD)) {
                     if (getLocal().getZ() == 0) {
                         if (!Constants.DRAYNOR_MANOR_DOWNSTAIRS.contains(getLocal())) {
                             s.log("Walking to Draynor Manor Downstairs");
-                            Walking.walk(Constants.DRAYNOR_MANOR_DOWNSTAIRS);
+                            Walking.walk(Constants.DRAYNOR_MANOR_DOWNSTAIRS.getCenter());
                         } else {
                             GameObjects.closest(Constants.STAIRCASE).interact("Climb-up");
                         }
@@ -55,7 +55,11 @@ public class ErnestTheChicken {
                     } else {
                         s.log("Can't see any fish food");
                     }
-                } else if (!Inventory.contains(Constants.POISON)) {
+                    return;
+                }
+
+                // Get poison
+                if (!Inventory.contains(Constants.POISON)) {
                     if (getLocal().getZ() == 1) {
                         if (!Constants.DRAYNOR_MANOR_UPSTAIRS.contains(getLocal())) {
                             s.log("Walking to Draynor Manor Upstairs");
@@ -74,13 +78,23 @@ public class ErnestTheChicken {
                 } else {
                     Inventory.get(Constants.POISON).useOn(Inventory.get(Constants.FISH_FOOD));
                 }
-            } else if (!Inventory.contains(Constants.SPADE)) {
+
+                return;
+            }
+
+            // Get spade
+            if (!Inventory.contains(Constants.SPADE)) {
                 if (Constants.SPADE_AREA.contains(getLocal())) {
                     GroundItems.closest(Constants.SPADE).interact("Take");
                 } else {
                     Walking.walk(Constants.SPADE_AREA);
                 }
-            } else if (!Constants.FOUNTAIN_AREA.contains(getLocal())) {
+
+                return;
+            }
+
+            // Go search fountain
+            if (!Constants.FOUNTAIN_AREA.contains(getLocal())) {
                 Walking.walk(Constants.FOUNTAIN_AREA);
             } else if (Inventory.contains(Constants.POISONED_FISH_FOOD)) {
                 Inventory.get(Constants.POISONED_FISH_FOOD).useOn(GameObjects.closest(Constants.FOUNTAIN));
@@ -90,7 +104,12 @@ public class ErnestTheChicken {
                 GameObjects.closest(Constants.FOUNTAIN).interact("Search");
                 s.sleep(500, 1000);
             }
-        } else if (!Inventory.contains(Constants.RUBBER_TUBE)) {
+
+            return;
+        }
+
+        // Get rubber tube
+        if (!Inventory.contains(Constants.RUBBER_TUBE)) {
             if (!Inventory.contains(Constants.KEY)) {
                 if (!Constants.COMPOST_AREA.contains(getLocal())) {
                     Walking.walk(Constants.COMPOST_AREA);
@@ -104,7 +123,11 @@ public class ErnestTheChicken {
                     GroundItems.closest(Constants.RUBBER_TUBE).interact("Take");
                 }
             }
-        } else if (!Inventory.contains(Constants.OIL_CAN)) {
+            return;
+        }
+
+        // Do the insane oil can lever stuff
+        if (!Inventory.contains(Constants.OIL_CAN)) {
             s.log("Getting oil can");
             if (!Constants.BASEMENT_AREA.contains(getLocal())) {
                 if (!Constants.LADDER_GROUND_FLOOR.contains(getLocal())) {
@@ -177,22 +200,43 @@ public class ErnestTheChicken {
             } else {
                 GroundItems.closest(Constants.OIL_CAN).interact("Take");
             }
-        } else if (Constants.BASEMENT_AREA.contains(getLocal())) {
+
+            return;
+        }
+
+        // Leave the basement
+        if (Constants.BASEMENT_AREA.contains(getLocal())) {
             if (Constants.BASEMENT_LADDER.contains(getLocal())) {
                 GameObjects.closest(Constants.LADDER).interact("Climb-up");
             }
-            else Walking.walk(Constants.BASEMENT_LADDER);
-        } else if (Constants.LADDER_GROUND_FLOOR.contains(getLocal())) {
+            Walking.walk(Constants.BASEMENT_LADDER);
+            return;
+        }
+
+        // Leave the bookcase room
+        if (Constants.LADDER_GROUND_FLOOR.contains(getLocal())) {
             GameObjects.closest(Constants.LEVER).interact("Pull");
-        } else if (getLocal().getZ() == 0) {
+            return;
+        }
+
+        // Go up stairs
+        if (getLocal().getZ() == 0) {
             if (!Constants.DRAYNOR_MANOR_DOWNSTAIRS.contains(getLocal())) {
                 Walking.walk(Constants.DRAYNOR_MANOR_DOWNSTAIRS);
             } else {
                 GameObjects.closest(Constants.STAIRCASE).interact("Climb-up");
             }
-        } else if (getLocal().getZ() == 1) {
+            return;
+        }
+
+        // Go up the spiral staircase
+        if (getLocal().getZ() == 1) {
             GameObjects.all(Constants.STAIRCASE).stream().filter(x -> x.hasAction("Climb-up")).findFirst().get().interact("Climb-up");
-        } else if (getLocal().getZ() == 2) {
+            return;
+        }
+
+        // Finish quest
+        if (getLocal().getZ() == 2) {
             s.log("Walking to Oddenstein's room");
             if (!Constants.ODDENSTEIN_ROOM.contains(getLocal())) {
                 Walking.walk(Constants.ODDENSTEIN_ROOM);
@@ -205,8 +249,6 @@ public class ErnestTheChicken {
                 }
             }
         }
-
-        return 2000;
     }
 
     public static boolean leverADown() {
